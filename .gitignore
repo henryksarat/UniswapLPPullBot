@@ -2,6 +2,7 @@
 /private_config.ts
 **/private_config.ts
 src/config/private_config.ts
+config/private_config.ts
 
 # Generated JavaScript files
 *.js

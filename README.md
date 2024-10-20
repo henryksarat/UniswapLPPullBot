@@ -5,7 +5,7 @@
 npm install
 ```
 
-2. Go to private_config.ts and add your private key and rpc url
+2. Go to config/private_config.ts and add your private key and rpc url
 
 ```
 export const PRIVATE_KEY = '<ADD PRIVATE KEY HERE>'
