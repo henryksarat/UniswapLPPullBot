@@ -315,7 +315,7 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
     // Create Token instances for Uniswap V3 SDK
     const tokenA = new Token(chainId, token0, token0Decimals, token0Symbol);
     const tokenB = new Token(chainId, token1, token1Decimals, token1Symbol);
-  
+
     // Fetch pool data (assuming the pool exists and is initialized)
     const poolAddress = Pool.getAddress(tokenA, tokenB, fee);
   

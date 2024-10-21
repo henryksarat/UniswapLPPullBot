@@ -46,6 +46,7 @@ async function main(provider: any, wallet: any, exitAt: number) {
           }
           await printToScreen(positions, wallet.address)
           await filterAndExecuteLiquidate(provider, positions, 'WETH', 'USDC')
+          await filterAndExecuteLiquidate(provider, positions, 'WBTC', 'USDC')
           console.log("finished checking...", new Date().toLocaleString())
           await utils.delay(SLEEP_TIME);
         } catch (error) {
@@ -80,7 +81,16 @@ async function printToScreen(positions: any, walletAddress: string) {
   
         
         console.log('------')
-        console.log("TokenId=%s\nRangeStatus=%s,\nToken0=%s,\nToken1=%s,\nFee=%s,\nPrice1=%s\nPrice2=%s\n[Address=%s]", positionInfo.tokenId, positionInfo.rangeStatus, positionInfo.token0.symbol, positionInfo.token1.symbol, positionInfo.fee, currentTickPrice, currentTickPriceOther, positionInfo.poolAddress)
+        console.log("TokenId=%s\nRangeStatus=%s,\nToken0=%s,\nToken1=%s,\nFee=%s,\nPrice1=%s\nPrice2=%s\n[Address=%s]", 
+          positionInfo.tokenId, 
+          positionInfo.rangeStatus, 
+          positionInfo.token0.symbol, 
+          positionInfo.token1.symbol, 
+          positionInfo.fee, 
+          currentTickPrice, 
+          currentTickPriceOther, 
+          positionInfo.poolAddress
+        )
         console.log("Liquidity=%s", positionInfo.liquidity)
   
   

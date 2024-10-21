@@ -35,9 +35,11 @@ export async function ERC20Information(address: string, provider: any) {
           'function symbol() view returns (string)'
       ], provider);
 
+      const decimals = await tokenContract.decimals()
+      const symbol = await tokenContract.symbol()
       return {
-        decimals: await tokenContract.decimals,
-        symbol: await tokenContract.symbol,
+        decimals: decimals,
+        symbol: symbol,
       }
     } catch (error) {
       // Handle the error
