@@ -1,14 +1,14 @@
 import { ethers } from 'ethers';
+
 import { ERC20Information } from './erc20_basic'
 import * as erc20_basic from './erc20_basic'
 import * as uni_config from '../config/uni_config'
+import * as utils from './utils'
 
 const NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS = uni_config.NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS
 
-import { getHumanReadableFromTick } from './utils'
 const JSBI = require('jsbi');
 const { Percent } = require('@uniswap/sdk-core')
-
 const { NonfungiblePositionManager } = require('@uniswap/v3-sdk');
 const IUniswapV3PoolABI = require("@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json")
 const { Pool } = require('@uniswap/v3-sdk');
@@ -172,8 +172,8 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
       const token0 = new Token(chainId, token0Info.address, token0Info.decimals, token0Info.symbol, token0Info.name);
       const token1 = new Token(chainId, token1Info.address, token1Info.decimals, token1Info.symbol, token1Info.name);
         
-      const [lowerTickPriceToken1, lowerTickPriceToken0] = getHumanReadableFromTick(position.tickLower, token0Info.decimals, token1Info.decimals)
-      const [upperTickPriceToken1, upperTickPriceToken0] = getHumanReadableFromTick(position.tickUpper, token0Info.decimals, token1Info.decimals) 
+      const [lowerTickPriceToken1, lowerTickPriceToken0] = utils.getHumanReadableFromTick(position.tickLower, token0Info.decimals, token1Info.decimals)
+      const [upperTickPriceToken1, upperTickPriceToken0] = utils.getHumanReadableFromTick(position.tickUpper, token0Info.decimals, token1Info.decimals) 
    
       const poolAddressGet = Pool.getAddress(
         token0, 

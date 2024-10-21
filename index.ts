@@ -34,23 +34,23 @@ async function main(provider: any, wallet: any, exitAt: number) {
 
     while(true) {
         try {
-        const positions = await uniswap_functions.getPositions(
-          PROVIDER, 
-          nfpmContract, 
-          positonIds, 
-          CHAIN_ID
-        )
-        if (positions.length <= exitAt) {
-            console.error('reached limit with length:', positions.length)
-            break
-        }
-        await printToScreen(positions, wallet.address)
-        await filterAndExecuteLiquidate(provider, positions, 'WETH', 'USDC')
-        console.log("finished checking...", new Date().toLocaleString())
-        await utils.delay(SLEEP_TIME);
+          const positions = await uniswap_functions.getPositions(
+            PROVIDER, 
+            nfpmContract, 
+            positonIds, 
+            CHAIN_ID
+          )
+          if (positions.length <= exitAt) {
+              console.error('reached limit with length:', positions.length)
+              break
+          }
+          await printToScreen(positions, wallet.address)
+          await filterAndExecuteLiquidate(provider, positions, 'WETH', 'USDC')
+          console.log("finished checking...", new Date().toLocaleString())
+          await utils.delay(SLEEP_TIME);
         } catch (error) {
-        console.error('got an error thrown up, error:', error)
-        console.log("So will continue on, time is...", new Date().toLocaleString())
+          console.error('got an error thrown up, error:', error)
+          console.log("So will continue on, time is...", new Date().toLocaleString())
         }
     }
 }
