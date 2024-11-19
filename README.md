@@ -3,6 +3,9 @@
 1. Run the following to install dependencies
 ```
 npm install
+npm install jsbi
+npm install @uniswap/sdk-core
+npm install @uniswap/v3-sdk
 ```
 
 2. Go to config/private_config.ts and add your private key and rpc url
