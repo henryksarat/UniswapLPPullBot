@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 
 import { ERC20Information } from './erc20_basic'
 import * as erc20_basic from './erc20_basic'
@@ -29,16 +29,36 @@ export const RANGE_STATUS = Object.freeze({
     liquidityPool: ethers.BigNumber;
   }
 
-function rangeFactor(tickLower: number, tickUpper: number, currentTick: number) {
+export function rangeFactor(
+  tickLower: number, 
+  tickUpper: number, 
+  currentTick: number,
+  decimal0: number,
+  decimal1: number
+) {
     var rangeStatus = RANGE_STATUS.NO_RANGE
 
-    if (currentTick > tickLower && currentTick < tickUpper) {
+    console.log('tickLower=' + tickLower)
+    console.log('tickUpper=' + tickUpper)
+    console.log('currentTick=' + currentTick)
+
+    if (decimal0 > decimal1) { // Example is WETH/USDC, decimal0=18, decimal1=6
+      if (currentTick > tickLower && currentTick < tickUpper) {
+          rangeStatus = RANGE_STATUS.IN_RANGE
+      } else if (currentTick > tickUpper) {
+          rangeStatus = RANGE_STATUS.ABOVE_RANGE
+      } else if (currentTick < tickLower) {
+          rangeStatus = RANGE_STATUS.BELOW_RANGE
+      } 
+    } else {
+      if (currentTick > tickLower && currentTick < tickUpper) {
         rangeStatus = RANGE_STATUS.IN_RANGE
-    } else if (currentTick > tickUpper) {
+      } else if (currentTick > tickUpper) {
+        rangeStatus = RANGE_STATUS.BELOW_RANGE  
+      } else if (currentTick < tickLower) {
         rangeStatus = RANGE_STATUS.ABOVE_RANGE
-    } else if (currentTick < tickLower) {
-        rangeStatus = RANGE_STATUS.BELOW_RANGE
-    } 
+      }
+    }
 
     return rangeStatus
 }
@@ -136,14 +156,46 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
 
   export async function getFeesToCollect(nfpmContract:any, tokenIdNumber: number, ownerAddress: string, token0: any, token1: any) {
     const MAX_UINT128 = BigInt(2) ** BigInt(128) - BigInt(1);
+    console.log('results before for fees=')
     var results = await nfpmContract.callStatic.collect({tokenId: tokenIdNumber,
       recipient: ownerAddress, 
       amount0Max: MAX_UINT128, 
       amount1Max: MAX_UINT128}, {from: ownerAddress});
+
+      const token0Exp = 10**token0.decimals; 
+      const token0ExpStr = token0Exp.toString();
+      var normalizedFee0 = divideAndFormat(results.amount0, token0ExpStr)
+
+      const token1Exp = 10**token1.decimals; 
+      const token1ExpStr = token1Exp.toString();
+      var normalizedFee1 = divideAndFormat(results.amount1, token1ExpStr)
+
     return {
-      'fee0': results.amount0.toNumber()/10**token0.decimals,
-      'fee1': results.amount1.toNumber()/10**token1.decimals
+      'fee0': normalizedFee0,
+      'fee1': normalizedFee1
     }
+  }
+
+
+  export function divideAndFormat(
+    largeNumberStr: string,
+    divisor: string,
+    decimalPlaces: number = 6
+  ): string {
+    // Convert inputs to BigNumber
+    const largeNumber = BigNumber.from(largeNumberStr);
+    const bigDivisor = BigNumber.from(divisor);
+  
+    // Scale for decimal places
+    const scale = BigNumber.from(10).pow(decimalPlaces);
+    const scaledResult = largeNumber.mul(scale).div(bigDivisor);
+  
+    // Convert to string and format as decimal
+    const scaledResultStr = scaledResult.toString();
+    const integerPart = scaledResultStr.slice(0, -decimalPlaces) || "0";
+    const fractionalPart = scaledResultStr.slice(-decimalPlaces).padStart(decimalPlaces, "0");
+  
+    return `${integerPart}.${fractionalPart}`;
   }
 
   export async function getPositions(provider: any, nfpmContract: any, positionIds: any, chainId: number) {
@@ -182,7 +234,14 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
       )
   
       const currentTick = await getCurrentTick(provider, poolAddressGet, token0, token1)
-      var rangeStatus = rangeFactor(position.tickLower, position.tickUpper, currentTick)
+
+      var rangeStatus = rangeFactor(
+        position.tickLower, 
+        position.tickUpper, 
+        currentTick,
+        token0Info.decimals,
+        token1Info.decimals
+      )
   
       const mapping = {
         tickLower: [position.tickLower, lowerTickPriceToken1, lowerTickPriceToken0],
@@ -256,6 +315,9 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
       gasLimit: ethers.BigNumber.from(tokenId),
       gasPrice: gasPrice,
     }
+
+    console.log('gasPrice=' + gasPrice)
+    console.log('gasLimit=' + ethers.BigNumber.from(tokenId))
   
     if (!safeMode) {
       const tx = await wallet.sendTransaction(transaction);

@@ -47,6 +47,7 @@ async function main(provider: any, wallet: any, exitAt: number) {
           await printToScreen(positions, wallet.address)
           await filterAndExecuteLiquidate(provider, positions, 'WETH', 'USDC')
           await filterAndExecuteLiquidate(provider, positions, 'WBTC', 'USDC')
+          await filterAndExecuteLiquidate(provider, positions, 'USDC', 'LINK')
           console.log("finished checking...", new Date().toLocaleString())
           await utils.delay(SLEEP_TIME);
         } catch (error) {
