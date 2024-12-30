@@ -47,12 +47,15 @@ async function main(provider: any, wallet: any, exitAt: number) {
           }
           await printToScreen(positions, wallet.address)
           
-          // Replace multiple calls with a loop
           for (const pair of LIQUIDATION_PAIRS) {
               await filterAndExecuteLiquidate(provider, positions, pair.token0, pair.token1)
           }
           
+          console.log('------')
+          console.log('------')
           console.log("finished checking...", new Date().toLocaleString())
+          console.log('------')
+          console.log('------')
           await utils.delay(SLEEP_TIME);
         } catch (error) {
           console.error('got an error thrown up, error:', error)
@@ -79,6 +82,11 @@ export async function filterAndExecuteLiquidate(provider: any, positions: any, t
 }
 
 async function printToScreen(positions: any, walletAddress: string) {
+    console.log('------')
+    console.log('------')
+    console.log('SUMMARY OF ALL CURRENT POSITIONS')
+    console.log('------')
+    console.log('------')
     for (let positionInfo of positions) {
       if(positionInfo.isOpen) {
         const currentTickPrice = utils.getHumanReadableFromTick(positionInfo.currentTickPool, positionInfo.token0.decimals, positionInfo.token1.decimals)[0]
@@ -86,11 +94,11 @@ async function printToScreen(positions: any, walletAddress: string) {
   
         
         console.log('------')
-        console.log("TokenId=%s\nRangeStatus=%s,\nToken0=%s,\nToken1=%s,\nFee=%s,\nPrice1=%s\nPrice2=%s\n[Address=%s]", 
-          positionInfo.tokenId, 
-          positionInfo.rangeStatus, 
+        console.log("Token0=%s\nToken1=%s\nTokenId=%s\nRangeStatus=%s\nFee=%s\nPrice1=%s\nPrice2=%s\n[Address=%s]", 
           positionInfo.token0.symbol, 
           positionInfo.token1.symbol, 
+          positionInfo.tokenId, 
+          positionInfo.rangeStatus, 
           positionInfo.fee, 
           currentTickPrice, 
           currentTickPriceOther, 
