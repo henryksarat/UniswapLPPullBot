@@ -3,6 +3,7 @@ import * as uniswap_functions from './src/uniswap_functions'
 import * as uni_config from './config/uni_config'
 import * as utils from './src/utils'
 import * as index from './index'
+import { LIQUIDATION_PAIRS } from './config/liquidation_pairs';
 
 const INONFUNGIBLE_POSITION_MANAGER = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
 
@@ -45,9 +46,12 @@ async function main(provider: any, wallet: any, exitAt: number) {
               break
           }
           await printToScreen(positions, wallet.address)
-          await filterAndExecuteLiquidate(provider, positions, 'WETH', 'USDC')
-          await filterAndExecuteLiquidate(provider, positions, 'WBTC', 'USDC')
-          await filterAndExecuteLiquidate(provider, positions, 'USDC', 'LINK')
+          
+          // Replace multiple calls with a loop
+          for (const pair of LIQUIDATION_PAIRS) {
+              await filterAndExecuteLiquidate(provider, positions, pair.token0, pair.token1)
+          }
+          
           console.log("finished checking...", new Date().toLocaleString())
           await utils.delay(SLEEP_TIME);
         } catch (error) {
