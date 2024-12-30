@@ -37,11 +37,6 @@ export function rangeFactor(
   decimal1: number
 ) {
     var rangeStatus = RANGE_STATUS.NO_RANGE
-
-    console.log('tickLower=' + tickLower)
-    console.log('tickUpper=' + tickUpper)
-    console.log('currentTick=' + currentTick)
-
     if (decimal0 > decimal1) { // Example is WETH/USDC, decimal0=18, decimal1=6
       if (currentTick > tickLower && currentTick < tickUpper) {
           rangeStatus = RANGE_STATUS.IN_RANGE
