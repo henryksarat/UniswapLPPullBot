@@ -1,6 +1,5 @@
 import * as uniswap_functions from '../src/uniswap_functions'
 
-
 describe('divideAndFormat tests', () => {  
     const testCases = [
       {
@@ -155,3 +154,50 @@ describe('divideAndFormat tests', () => {
       });
     });
   });
+
+describe('executeTransaction', () => {
+    const mockTransaction = {
+        data: '0x123',
+        to: '0x456',
+        value: '0',
+    };
+
+    const testCases = [
+        {
+            description: 'should handle JSON error bodies',
+            error: { 
+                body: JSON.stringify({ error: 'Transaction failed' }) 
+            },
+            expectedErrorBody: 'JSON parsed. {"error":"Transaction failed"}'
+        },
+        {
+            description: 'should handle non-JSON error bodies',
+            error: { 
+                body: 'Invalid error format' 
+            },
+            expectedErrorBody: 'Unparsable JSON. Error=Invalid error format'
+        },
+        {
+            description: 'should handle errors without body property',
+            error: { 
+                message: 'Generic error message' 
+            },
+            expectedErrorBody: 'No error body. Error=Generic error message'
+        }
+    ];
+
+    testCases.forEach(({ description, error, expectedErrorBody }) => {
+        it(description, async () => {
+            const mockWallet = {
+                sendTransaction: jest.fn().mockRejectedValue(error)
+            };
+
+            const result = await uniswap_functions.executeTransaction(mockWallet, mockTransaction);
+            
+            expect(mockWallet.sendTransaction).toHaveBeenCalledWith(mockTransaction);
+            expect(result).toEqual({
+                'transactionHash': `Error thrown so no transaction=${expectedErrorBody}`
+            });
+        });
+    });
+});

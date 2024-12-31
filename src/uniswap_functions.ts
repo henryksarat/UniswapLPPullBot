@@ -271,13 +271,12 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
     percent: any,
     safeMode: boolean,
   ) {
-  
     const collectOptions = {
       expectedCurrencyOwed0: CurrencyAmount.fromRawAmount(tokenA, 0),
       expectedCurrencyOwed1: CurrencyAmount.fromRawAmount(tokenB, 0),
       recipient: wallet.address,
     }
-  
+
     const removeLiquidityOptions = {
       deadline: Math.floor(Date.now() / 1000) + 60 * 20,
       slippageTolerance: new Percent(50, 10_000),
@@ -286,22 +285,21 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
       liquidityPercentage: new Percent(percent, 100),
       collectOptions,
     }
-  
+
     const { calldata, value } = NonfungiblePositionManager.removeCallParameters(
       position,
       removeLiquidityOptions
     )
-  
+
     var gasPrice;
-  
+
     try {
-      gasPrice = await provider.getGasPrice();
+        gasPrice = await provider.getGasPrice();
     } catch (error) {
-      // Handle the error
-      console.error('An error occurred getting the gas price:', error);
-      throw error
+        console.error('An error occurred getting the gas price:', error);
+        throw error
     }
-  
+
     const transaction = {
       data: calldata,
       to: NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS,
@@ -313,41 +311,39 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
 
     console.log('gasPrice=' + gasPrice)
     console.log('gasLimit=' + ethers.BigNumber.from(tokenId))
-  
+
     if (!safeMode) {
-      try {
+        return await executeTransaction(wallet, transaction);
+    } else {
+        return {
+            'transactionHash': 'Running in Safe Mode so no Transaction Hash'
+        }
+    }
+  }
+
+  export async function executeTransaction(wallet: any, transaction: any) {
+    try {
         const tx = await wallet.sendTransaction(transaction);
         const receipt = await tx.wait();
-    
-        return receipt
-      } catch (error: any) {
-        
-
+        return receipt;
+    } catch (error: any) {
         var errorBody = 'unknown'
         if (error?.body) {
-          // Parse and log the error body if it's JSON
-          try {
-            errorBody = JSON.parse(error.body);
-            console.error("Error body:", errorBody);
-          } catch (parseError) {
-            console.error("Error body could not be parsed:", error.body);
-          }
+            try {
+                errorBody = 'JSON parsed. ' + JSON.stringify(JSON.parse(error.body));
+                console.error("Error body:", errorBody);
+            } catch (parseError) {
+                errorBody = 'Unparsable JSON. Error=' + error.body;
+                console.error("Error body could not be parsed:", error.body);
+            }
         } else {
-          errorBody = error.message
-          console.error("Error message:", error.message); // Log the main error message
+            errorBody = 'No error body. Error=' + error.message;
+            console.error("Error message:", error.message);
         }
-
-
-
 
         return {
-          'transactionHash': 'Error thrown so no transaction=' + errorBody
+            'transactionHash': 'Error thrown so no transaction=' + errorBody
         }
-      }
-    } else {
-      return {
-        'transactionHash': 'Running in Safe Mode so no Transaction Hash'
-      }
     }
   }
 
