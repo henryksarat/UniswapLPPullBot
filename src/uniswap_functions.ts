@@ -315,10 +315,35 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
     console.log('gasLimit=' + ethers.BigNumber.from(tokenId))
   
     if (!safeMode) {
-      const tx = await wallet.sendTransaction(transaction);
-      const receipt = await tx.wait();
-  
-      return receipt
+      try {
+        const tx = await wallet.sendTransaction(transaction);
+        const receipt = await tx.wait();
+    
+        return receipt
+      } catch (error: any) {
+        
+
+        var errorBody = 'unknown'
+        if (error?.body) {
+          // Parse and log the error body if it's JSON
+          try {
+            errorBody = JSON.parse(error.body);
+            console.error("Error body:", errorBody);
+          } catch (parseError) {
+            console.error("Error body could not be parsed:", error.body);
+          }
+        } else {
+          errorBody = error.message
+          console.error("Error message:", error.message); // Log the main error message
+        }
+
+
+
+
+        return {
+          'transactionHash': 'Error thrown so no transaction=' + errorBody
+        }
+      }
     } else {
       return {
         'transactionHash': 'Running in Safe Mode so no Transaction Hash'

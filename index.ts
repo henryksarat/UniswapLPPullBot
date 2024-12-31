@@ -72,7 +72,8 @@ export async function filterAndExecuteLiquidate(provider: any, positions: any, t
             && positionInfo.token1.symbol == token1 
             && positionInfo.rangeStatus == uniswap_functions.RANGE_STATUS.BELOW_RANGE
         ) {
-            console.log('WE SHOULD LIQUIDATE NOW! Token=', positionInfo.tokenId)
+            const tokenConcat = token0 + '/' + token1
+            console.log('WE SHOULD LIQUIDATE NOW! Token Pair=', tokenConcat)
             index.executeLiquidate(provider, positionInfo.tokenId, false)
             atLestOneExecution = true
         }
@@ -130,7 +131,9 @@ async function printToScreen(positions: any, walletAddress: string) {
     console.log(`Amount of ${positionInfo.token0Symbol}: ${positionInfo.amount0}`);
     console.log(`Amount of ${positionInfo.token1Symbol}: ${positionInfo.amount1}`);
   
+    console.log('Getting before Eth Balance')
     const beforeEthBalance = await utils.getAndPrintBalance(wallet, provider)
+    console.log('Got before Eth Balance=' + beforeEthBalance)
     const feesToCollect = await uniswap_functions.getFeesToCollect(nfpmContract, tokenId, wallet.address, positionInfo['tokenA'], positionInfo['tokenB'])
   
     console.log('Fee 0 =', feesToCollect.fee0)
