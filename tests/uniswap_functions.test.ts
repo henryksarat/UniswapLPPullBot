@@ -1,4 +1,9 @@
 import * as uniswap_functions from '../src/uniswap_functions'
+import { ethers } from 'ethers';
+
+jest.mock('../config/uni_config', () => ({
+  NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS: '0xMockedContractAddress'
+}));
 
 describe('divideAndFormat tests', () => {  
     const testCases = [
@@ -199,5 +204,83 @@ describe('executeTransaction', () => {
                 'transactionHash': `Error thrown so no transaction=${expectedErrorBody}`
             });
         });
+    });
+});
+
+describe('buildTransaction', () => {
+    const testCases = [
+        {
+            description: 'should build transaction with correct gas price',
+            mockGasPrice: '1000',
+            tokenId: 123,
+            calldata: '0xabcd',
+            value: '100',
+            walletAddress: '0x123',
+            to: '0xMockedContractAddress',
+            expectedTransaction: {
+                data: '0xabcd',
+                to: '0xMockedContractAddress',
+                value: '100',
+                from: '0x123',
+                gasLimit: ethers.BigNumber.from(123),
+                gasPrice: '1000'
+            }
+        },
+        {
+            description: 'should build transaction with zero value',
+            mockGasPrice: '2000',
+            tokenId: 456,
+            calldata: '0xef12',
+            value: '0',
+            walletAddress: '0x456',
+            to: '0xMockedContractAddress',
+            expectedTransaction: {
+                data: '0xef12',
+                to: '0xMockedContractAddress',
+                value: '0',
+                from: '0x456',
+                gasLimit: ethers.BigNumber.from(456),
+                gasPrice: '2000'
+            }
+        }
+    ];
+
+    testCases.forEach(({ description, mockGasPrice, tokenId, calldata, value, walletAddress, to, expectedTransaction }) => {
+        it(description, async () => {
+            const mockProvider = {
+                getGasPrice: jest.fn().mockResolvedValue(mockGasPrice)
+            };
+
+            const result = await uniswap_functions.buildTransaction(
+                mockProvider,
+                walletAddress,
+                tokenId,
+                calldata,
+                value,
+                to
+            );
+
+            expect(mockProvider.getGasPrice).toHaveBeenCalled();
+            expect(result).toEqual(expectedTransaction);
+        });
+    });
+
+    it('should throw error when gas price fetch fails', async () => {
+        const mockProvider = {
+            getGasPrice: jest.fn().mockRejectedValue(new Error('Gas price fetch failed'))
+        };
+
+        await expect(
+          uniswap_functions.buildTransaction(
+              mockProvider,
+              '0x123',
+              123,
+              '0xabcd',
+              '100',
+              '0xMockedContractAddress'
+          )
+      ).rejects.toThrow('Gas price fetch failed');
+
+      expect(mockProvider.getGasPrice).toHaveBeenCalled();
     });
 });

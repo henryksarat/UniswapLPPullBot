@@ -291,26 +291,14 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
       removeLiquidityOptions
     )
 
-    var gasPrice;
-
-    try {
-        gasPrice = await provider.getGasPrice();
-    } catch (error) {
-        console.error('An error occurred getting the gas price:', error);
-        throw error
-    }
-
-    const transaction = {
-      data: calldata,
-      to: NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS,
-      value: value,
-      from: wallet.address,
-      gasLimit: ethers.BigNumber.from(tokenId),
-      gasPrice: gasPrice,
-    }
-
-    console.log('gasPrice=' + gasPrice)
-    console.log('gasLimit=' + ethers.BigNumber.from(tokenId))
+    const transaction = await buildTransaction(
+      provider,
+      wallet.address,
+      tokenId,
+      calldata,
+      value,
+      NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS
+    );
 
     if (!safeMode) {
         return await executeTransaction(wallet, transaction);
@@ -319,6 +307,35 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
             'transactionHash': 'Running in Safe Mode so no Transaction Hash'
         }
     }
+  }
+
+  export async function buildTransaction(
+    provider: any,
+    walletAddress: string,
+    tokenId: number,
+    calldata: string,
+    value: any,
+    to: string,
+  ) {
+    let gasPrice;
+    try {
+        gasPrice = await provider.getGasPrice();
+    } catch (error) {
+        // console.error('An error occurred getting the gas price:', error);
+        throw error;
+    }
+
+    console.log('gasPrice=' + gasPrice);
+    console.log('gasLimit=' + ethers.BigNumber.from(tokenId));
+
+    return {
+        data: calldata,
+        to: to,
+        value: value,
+        from: walletAddress,
+        gasLimit: ethers.BigNumber.from(tokenId),
+        gasPrice: gasPrice,
+    };
   }
 
   export async function executeTransaction(wallet: any, transaction: any) {
