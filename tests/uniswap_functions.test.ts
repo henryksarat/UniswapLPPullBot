@@ -1,5 +1,7 @@
 import * as uniswap_functions from '../src/uniswap_functions'
 import { ethers } from 'ethers';
+import { Token } from '@uniswap/sdk-core';
+// const JSBI = require('jsbi');
 
 jest.mock('../config/uni_config', () => ({
   NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS: '0xMockedContractAddress'
@@ -283,4 +285,88 @@ describe('buildTransaction', () => {
 
       expect(mockProvider.getGasPrice).toHaveBeenCalled();
     });
+});
+
+
+describe('getTickFromPrice', () => {
+  // Setup common test tokens
+  const ETH = new Token(
+    1, // chainId
+    '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // WETH address
+    18, // decimals
+    'WETH',
+    'Wrapped Ether'
+  );
+  
+  const USDC = new Token(
+    1, // chainId
+    '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // USDC address
+    6, // decimals
+    'USDC',
+    'USD Coin'
+  );
+
+  const USDT = new Token(
+    1, // chainId
+    '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDC address
+    6, // decimals
+    'USDT',
+    'Tether USD'
+  );
+
+  it('should handle decimal prices correctly', () => {
+    const tickEthUsdcLower = uniswap_functions.getTickFromPrice(ETH, USDC, '3604.7');
+    expect(tickEthUsdcLower).toEqual(-194420);
+
+    const tickEthUsdcUpper = uniswap_functions.getTickFromPrice(ETH, USDC, '3558.14');
+    expect(tickEthUsdcUpper).toEqual(-194551);
+
+    const tickUsdcUsdtLower = uniswap_functions.getTickFromPrice(USDC, USDT, '0.9989');
+    expect(tickUsdcUsdtLower).toEqual(-12);
+
+    const tickUSDCUSDTUpper = uniswap_functions.getTickFromPrice(USDC, USDT, '1.0009');
+    expect(tickUSDCUSDTUpper).toEqual(8);
+  });
+
+  it('should handle undefined base and quote and value', () => {
+    var result = uniswap_functions.getTickFromPrice(undefined, USDC, '3604.7');
+    expect(result).toBeUndefined();
+    result = uniswap_functions.getTickFromPrice(ETH, undefined, '3604.7');
+    expect(result).toBeUndefined();
+    result = uniswap_functions.getTickFromPrice(ETH, USDC, '');
+    expect(result).toBeUndefined();
+  });
+
+  it('should handle price being negative', () => {
+    const result = uniswap_functions.getTickFromPrice(ETH, USDC, '-1000');
+    expect(result).toBeUndefined();
+  });
+}); 
+
+
+describe('tryParsePrice', () => {
+  // Setup common test tokens
+  const ETH = new Token(
+    1, // chainId
+    '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // WETH address
+    18, // decimals
+    'WETH',
+    'Wrapped Ether'
+  );
+  
+  const USDC = new Token(
+    1, // chainId
+    '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // USDC address
+    6, // decimals
+    'USDC',
+    'USD Coin'
+  );
+
+  it('should correctly parse decimal numbers', () => {
+    const result = uniswap_functions.tryParsePrice(ETH, USDC, '3604.7');
+
+    expect(result.baseCurrency).toBe(ETH);
+    expect(result.baseCurrency).toBe(ETH);
+    expect(result.quoteCurrency).toBe(USDC);
+  });
 });

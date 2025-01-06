@@ -5,16 +5,22 @@ import * as erc20_basic from './erc20_basic'
 import * as uni_config from '../config/uni_config'
 import * as utils from './utils'
 
+
 const NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS = uni_config.NONFUNGIBLE_POSITION_MANAGER_CONTRACT_ADDRESS
 
 const JSBI = require('jsbi');
 const { Percent } = require('@uniswap/sdk-core')
 const { NonfungiblePositionManager } = require('@uniswap/v3-sdk');
 const IUniswapV3PoolABI = require("@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json")
-const { Pool } = require('@uniswap/v3-sdk');
-const { Token } = require('@uniswap/sdk-core');
+const { Pool , priceToClosestTick} = require('@uniswap/v3-sdk');
+const { Token, Price } = require('@uniswap/sdk-core');
 const { CurrencyAmount } = require('@uniswap/sdk-core')
 const { Position, nearestUsableTick } = require('@uniswap/v3-sdk');
+
+
+const UNISWAP_V3_POOL_ABI = [
+  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)"
+];
 
 export const RANGE_STATUS = Object.freeze({
     BELOW_RANGE:   Symbol("BELOW_RANGE"),
@@ -218,7 +224,7 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
       
       const token0 = new Token(chainId, token0Info.address, token0Info.decimals, token0Info.symbol, token0Info.name);
       const token1 = new Token(chainId, token1Info.address, token1Info.decimals, token1Info.symbol, token1Info.name);
-        
+
       const [lowerTickPriceToken1, lowerTickPriceToken0] = utils.getHumanReadableFromTick(position.tickLower, token0Info.decimals, token1Info.decimals)
       const [upperTickPriceToken1, upperTickPriceToken0] = utils.getHumanReadableFromTick(position.tickUpper, token0Info.decimals, token1Info.decimals) 
    
@@ -227,7 +233,7 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
         token1, 
         position.fee
       )
-  
+
       const currentTick = await getCurrentTick(provider, poolAddressGet, token0, token1)
 
       var rangeStatus = rangeFactor(
@@ -449,3 +455,110 @@ export async function getCurrentTick(provider:any, poolAddress: string, token0: 
       amount1: amount1
     }
   }
+
+  export async function fetchPriceFromUniswap(
+    address: string, 
+    provider: ethers.providers.Provider,     
+    decimalsToken0: number,
+    decimalsToken1: number
+  ): Promise<number> {
+    // Connect to the Uniswap pool
+    const poolContract = new ethers.Contract(address, UNISWAP_V3_POOL_ABI, provider);
+  
+    // Fetch the current slot0 data
+    const { sqrtPriceX96 } = await poolContract.slot0();
+  
+    // Decode sqrtPriceX96 to get the price
+    const price = decodePriceFromSqrtPriceX96(sqrtPriceX96, decimalsToken0, decimalsToken1); // USDC has 6 decimals, ETH has 18 decimals
+    return price;
+  }
+  
+  function decodePriceFromSqrtPriceX96(
+    sqrtPriceX96: ethers.BigNumber,
+    decimalsToken0: number,
+    decimalsToken1: number
+  ): number {
+    // Square the sqrtPriceX96 to get the price ratio
+    const numerator = sqrtPriceX96.mul(sqrtPriceX96); // BigNumber multiplication
+    const denominator = ethers.BigNumber.from(2).pow(192); // 2^192 as BigNumber
+    // Use higher precision by multiplying the numerator before division
+    const scaledNumerator = numerator.mul(ethers.BigNumber.from(10).pow(18));
+  
+    const priceRatio = scaledNumerator.div(denominator); // Division with scaling
+  
+    // Adjust for token decimals
+    const adjustedPrice = parseFloat(priceRatio.toString()) * 10 ** (decimalsToken0 - decimalsToken1 - 18);
+  
+    return adjustedPrice;
+  }
+
+
+  const CHAINLINK_ETH_USD_FEED = "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612";
+
+// Chainlink Aggregator Interface
+const CHAINLINK_ABI = [
+  {
+    inputs: [],
+    name: "latestRoundData",
+    outputs: [
+      { internalType: "uint80", name: "roundId", type: "uint80" },
+      { internalType: "int256", name: "answer", type: "int256" },
+      { internalType: "uint256", name: "startedAt", type: "uint256" },
+      { internalType: "uint256", name: "updatedAt", type: "uint256" },
+      { internalType: "uint80", name: "answeredInRound", type: "uint80" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+
+async function fetchETHPrice(provider: ethers.providers.Provider): Promise<number> {
+  // Initialize the Chainlink price feed contract
+  const priceFeed = new ethers.Contract(CHAINLINK_ETH_USD_FEED, CHAINLINK_ABI, provider);
+
+  // Fetch the latest price data
+  const { answer } = await priceFeed.latestRoundData();
+
+  // Chainlink prices are scaled by 10^8 (8 decimals)
+  const ethPriceInUSD = parseFloat(ethers.utils.formatUnits(answer, 8));
+  return ethPriceInUSD;
+}
+
+
+export function getTickFromPrice(baseToken: typeof Token, quoteToken: typeof Token, value: string): typeof Price {
+  const result = tryParsePrice(baseToken, quoteToken, value)
+  console.log('Price result:', result)
+
+  if (result) {
+    const tick = priceToClosestTick(result)
+
+    console.log('the tick=' + tick)
+
+    return tick
+  } else {
+    return undefined
+  }
+}
+
+export function tryParsePrice(baseToken: typeof Token, quoteToken: typeof Token, value: string): typeof Price {
+  if (!baseToken || !quoteToken || !value) {
+    return undefined
+  }
+
+  if (!value.match(/^\d*\.?\d+$/)) { // Check if value is a valid number
+    return undefined
+  }
+
+  const [whole, fraction] = value.split('.')
+  const decimals = fraction ? fraction.length : 0
+  const withoutDecimals = JSBI.BigInt((whole || "") + (fraction || ""))
+
+  const baseAmount = JSBI.multiply(JSBI.BigInt(10 ** decimals), JSBI.BigInt(10 ** baseToken.decimals))
+  const quoteAmount = JSBI.multiply(withoutDecimals, JSBI.BigInt(10 ** quoteToken.decimals))
+
+  
+  const result = new Price(baseToken, quoteToken, baseAmount, quoteAmount);
+
+  return result
+}
